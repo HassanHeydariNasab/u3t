@@ -1,6 +1,7 @@
 test-results
 test-dbs
 node_modules
+*.sqlite
 
 # Output
 .output
