@@ -14,6 +14,13 @@ export interface GameBoard {
 	smallBoards: SmallBoard[][]; // 3x3 grid of small boards
 	winner: Player | 'draw' | null; // Winner of the entire game
 	activeBoard: { row: number; col: number } | null; // Which small board is active (null = any board)
+	lastMove: {
+		boardRow: number;
+		boardCol: number;
+		cellRow: number;
+		cellCol: number;
+		player: Player;
+	} | null; // Track the last move made
 }
 
 // Game state and metadata
@@ -94,7 +101,8 @@ export function createEmptyGameBoard(): GameBoard {
 					.map(() => createEmptySmallBoard())
 			),
 		winner: null,
-		activeBoard: null // First move can be anywhere
+		activeBoard: null, // First move can be anywhere
+		lastMove: null
 	};
 }
 

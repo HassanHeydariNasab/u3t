@@ -148,13 +148,15 @@ export class GamesService {
 	 * Convert database row to Game object
 	 */
 	private rowToGame(row: any): Game {
+		const board = JSON.parse(row.board) as GameBoard;
+
 		return {
 			id: row.id,
 			player1_id: row.player1_id,
 			player2_id: row.player2_id,
 			current_player: row.current_player,
 			status: row.status,
-			board: JSON.parse(row.board) as GameBoard,
+			board,
 			winner: row.winner,
 			created_at: row.created_at,
 			updated_at: row.updated_at

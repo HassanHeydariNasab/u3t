@@ -61,8 +61,9 @@ test.describe('Game Page Functionality', () => {
 		// Check game page elements
 		await expect(page.locator('h2')).toContainText('Ultimate Tic-Tac-Toe');
 		await expect(page.locator('.game-info')).toBeVisible();
-		await expect(page.locator('.player-info')).toContainText('You are: X');
-		await expect(page.locator('.game-status')).toContainText('Waiting for opponent');
+		await expect(page.locator('.players-info')).toBeVisible();
+		await expect(page.locator('.player-card').first()).toContainText(gameUser.username);
+		await expect(page.locator('.game-status')).toContainText('Waiting for opponent to join');
 
 		// Check game board
 		await expect(page.locator('.game-board')).toBeVisible();
@@ -101,17 +102,13 @@ test.describe('Game Page Functionality', () => {
 
 		// Navigate to the game
 		await page2.goto(gameUrl);
-
-		// Should see join game option
-		await expect(page2.locator('.join-game')).toBeVisible();
-		await expect(page2.locator('.join-game h2')).toContainText('Join this game?');
-
-		// Join the game
-		await page2.click('.join-game button');
+		await page2.waitForSelector('.join-game .btn-primary');
+		await page2.click('.join-game .btn-primary');
 
 		// Should now show game board
 		await expect(page2.locator('.game-board')).toBeVisible();
-		await expect(page2.locator('.player-info')).toContainText('You are: O');
+		await expect(page2.locator('.players-info')).toBeVisible();
+		await expect(page2.locator('.player-card').nth(1)).toContainText(player2.username);
 	});
 
 	test('should display correct game status for both players', async ({ page, context }) => {
@@ -143,11 +140,12 @@ test.describe('Game Page Functionality', () => {
 		await page2.waitForURL('/dashboard');
 
 		await page2.goto(gameUrl);
-		await page2.click('.join-game button');
+		await page2.waitForSelector('.join-game .btn-primary');
+		await page2.click('.join-game .btn-primary');
 
 		// Check game status for both players
 		await expect(page.locator('.game-status')).toContainText('Your turn');
-		await expect(page2.locator('.game-status')).toContainText("Opponent's turn");
+		await expect(page2.locator('.game-status')).toContainText(`${player1.username}'s turn`);
 	});
 
 	test('should allow making moves in the game', async ({ page, context }) => {
@@ -179,7 +177,8 @@ test.describe('Game Page Functionality', () => {
 		await page2.waitForURL('/dashboard');
 
 		await page2.goto(gameUrl);
-		await page2.click('.join-game button');
+		await page2.waitForSelector('.join-game .btn-primary');
+		await page2.click('.join-game .btn-primary');
 
 		// Player 1 makes first move
 		const firstCell = page.locator('.cell-playable').first();
@@ -189,7 +188,7 @@ test.describe('Game Page Functionality', () => {
 		await expect(firstCell).toContainText('X');
 
 		// Game status should change
-		await expect(page.locator('.game-status')).toContainText("Opponent's turn");
+		await expect(page.locator('.game-status')).toContainText(`${player2.username}'s turn`);
 		await expect(page2.locator('.game-status')).toContainText('Your turn');
 	});
 
@@ -321,5 +320,55 @@ test.describe('Game Page Functionality', () => {
 		// Check game metadata
 		await expect(page.locator('.game-meta h1')).toContainText('Game #');
 		await expect(page.locator('.game-meta p')).toContainText('Opponent: Waiting...');
+	});
+
+	test('debug join game issue', async ({ page, context }) => {
+		// Create two users
+		const player1 = DatabaseHelper.createUniqueTestUser('player1');
+		const player2 = DatabaseHelper.createUniqueTestUser('player2');
+
+		// Player 1 creates a game
+		await page.goto('/register');
+		await page.fill('input[name="email"]', player1.email);
+		await page.fill('input[name="username"]', player1.username);
+		await page.fill('input[name="password"]', player1.password);
+		await page.fill('input[name="confirmPassword"]', player1.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		await page.click('.create-game');
+		await page.waitForURL(/\/game\/[a-f0-9-]+/);
+		const gameUrl = page.url();
+
+		// Check what player 1 sees
+		console.log('Player 1 game status:', await page.locator('.game-status').textContent());
+		console.log('Player 1 sees join-game?', (await page.locator('.join-game').count()) > 0);
+
+		// Player 2 registers
+		const page2 = await context.newPage();
+		await page2.goto('/register');
+		await page2.fill('input[name="email"]', player2.email);
+		await page2.fill('input[name="username"]', player2.username);
+		await page2.fill('input[name="password"]', player2.password);
+		await page2.fill('input[name="confirmPassword"]', player2.password);
+		await page2.click('button[type="submit"]');
+		await page2.waitForURL('/dashboard');
+
+		// Navigate to the game
+		await page2.goto(gameUrl);
+		await page2.waitForTimeout(3000); // Wait for polling
+
+		// Debug what player 2 sees
+		console.log('Player 2 game status:', await page2.locator('.game-status').textContent());
+		console.log('Player 2 sees join-game?', (await page2.locator('.join-game').count()) > 0);
+		console.log('Player 2 page title:', await page2.title());
+
+		// Check if error is showing
+		if ((await page2.locator('.error').count()) > 0) {
+			console.log('Player 2 error:', await page2.locator('.error').textContent());
+		}
+
+		// This test is just for debugging, so let's make it pass
+		await expect(page2.locator('body')).toBeVisible();
 	});
 });

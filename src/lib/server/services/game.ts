@@ -62,6 +62,15 @@ export class GameService {
 		const smallBoard = newGame.board.smallBoards[move.boardRow][move.boardCol];
 		smallBoard.cells[move.cellRow][move.cellCol] = move.player;
 
+		// Track the last move
+		newGame.board.lastMove = {
+			boardRow: move.boardRow,
+			boardCol: move.boardCol,
+			cellRow: move.cellRow,
+			cellCol: move.cellCol,
+			player: move.player
+		};
+
 		// Check if the small board is now won
 		smallBoard.winner = this.checkSmallBoardWinner(smallBoard);
 

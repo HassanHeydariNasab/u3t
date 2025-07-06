@@ -172,7 +172,7 @@
 								</div>
 								<div class="game-info">
 									<p>Created: {new Date(game.created_at).toLocaleDateString()}</p>
-									<p>By: Player 1</p>
+									<p>By: {game.player1_name || 'Unknown Player'}</p>
 								</div>
 								<button
 									class="game-btn join-game"

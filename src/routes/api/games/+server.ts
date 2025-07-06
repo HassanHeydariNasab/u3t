@@ -2,6 +2,7 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { authService } from '$lib/server/services/auth.js';
 import { gamesService } from '$lib/server/services/games.js';
 import { gameService } from '$lib/server/services/game.js';
+import { usersService } from '$lib/server/services/users.js';
 
 // GET /api/games - List games for the authenticated user
 export const GET: RequestHandler = async ({ request }) => {
@@ -12,7 +13,21 @@ export const GET: RequestHandler = async ({ request }) => {
 		}
 
 		const games = gamesService.findByPlayerId(user.id.toString());
-		return json({ games });
+
+		// Add player information to each game
+		const gamesWithPlayers = await Promise.all(
+			games.map(async (game) => {
+				const player1 = await usersService.findById(game.player1_id);
+				const player2 = game.player2_id ? await usersService.findById(game.player2_id) : null;
+				return {
+					...game,
+					player1_name: player1?.username || 'Unknown Player',
+					player2_name: player2?.username || null
+				};
+			})
+		);
+
+		return json({ games: gamesWithPlayers });
 	} catch (error) {
 		console.error('Get games error:', error);
 		return json({ error: 'Internal server error' }, { status: 500 });

@@ -33,6 +33,8 @@ export interface Game {
 	id: string;
 	player1_id: string;
 	player2_id: string | null;
+	player1_name?: string;
+	player2_name?: string | null;
 	current_player: 'X' | 'O';
 	status: 'waiting' | 'playing' | 'finished';
 	board: GameBoard;
@@ -45,6 +47,13 @@ export interface GameBoard {
 	smallBoards: SmallBoard[][];
 	winner: 'X' | 'O' | 'draw' | null;
 	activeBoard: { row: number; col: number } | null;
+	lastMove: {
+		boardRow: number;
+		boardCol: number;
+		cellRow: number;
+		cellCol: number;
+		player: 'X' | 'O';
+	} | null;
 }
 
 export interface SmallBoard {
