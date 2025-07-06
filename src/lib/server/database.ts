@@ -47,23 +47,18 @@ export function getDatabase(): Database.Database {
 export function resetDatabase(): void {
 	if (db) {
 		try {
-			// Clear all data first
-			db.exec('DELETE FROM users');
+			db.exec('DROP TABLE IF EXISTS users');
+			db.exec('DROP TABLE IF EXISTS games');
 			console.log('Database tables cleared');
 		} catch (error) {
 			console.log("Error clearing tables (expected if tables don't exist):", error);
 		}
 
-		// For test databases, we can also recreate tables to ensure clean state
-		const nodeEnv = env.NODE_ENV || 'development';
-		if (nodeEnv === 'test') {
-			try {
-				db.exec('DROP TABLE IF EXISTS users');
-				initializeTables();
-				console.log('Database tables recreated');
-			} catch (error) {
-				console.log('Error recreating tables:', error);
-			}
+		try {
+			initializeTables();
+			console.log('Database tables recreated');
+		} catch (error) {
+			console.log('Error recreating tables:', error);
 		}
 
 		console.log('Database reset completed');
@@ -117,25 +112,41 @@ export function cleanupTestDatabases() {
 function initializeTables() {
 	const createUsersTable = `
 		CREATE TABLE IF NOT EXISTS users (
-			id TEXT PRIMARY KEY DEFAULT (hex(randomblob(16))),
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			email TEXT UNIQUE NOT NULL,
-			username TEXT NOT NULL,
+			username TEXT UNIQUE NOT NULL,
 			password TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`;
 
-	const createTrigger = `
-		CREATE TRIGGER IF NOT EXISTS update_users_updated_at
-		AFTER UPDATE ON users
-		BEGIN
-			UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-		END
+	const createGamesTable = `
+		CREATE TABLE IF NOT EXISTS games (
+			id TEXT PRIMARY KEY,
+			player1_id TEXT NOT NULL,
+			player2_id TEXT,
+			current_player TEXT NOT NULL CHECK (current_player IN ('X', 'O')),
+			status TEXT NOT NULL CHECK (status IN ('waiting', 'playing', 'finished')),
+			board TEXT NOT NULL,  -- JSON string of the game board
+			winner TEXT CHECK (winner IN ('X', 'O', 'draw')),
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (player1_id) REFERENCES users(id),
+			FOREIGN KEY (player2_id) REFERENCES users(id)
+		)
+	`;
+
+	const createIndexes = `
+		CREATE INDEX IF NOT EXISTS idx_games_player1 ON games(player1_id);
+		CREATE INDEX IF NOT EXISTS idx_games_player2 ON games(player2_id);
+		CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
+		CREATE INDEX IF NOT EXISTS idx_games_created_at ON games(created_at);
 	`;
 
 	db.exec(createUsersTable);
-	db.exec(createTrigger);
+	db.exec(createGamesTable);
+	db.exec(createIndexes);
 }
 
 // Handle graceful shutdown

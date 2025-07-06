@@ -33,11 +33,10 @@ test.describe('Dashboard Functionality', () => {
 		// Check user info section
 		const userInfo = page.locator('.user-info');
 		await expect(userInfo).toBeVisible();
-		await expect(userInfo).toContainText(`Email: ${dashboardUser.email}`);
-		await expect(userInfo).toContainText(`Username: ${dashboardUser.username}`);
+		await expect(userInfo).toContainText(dashboardUser.email);
 	});
 
-	test('should display game section elements', async ({ page }) => {
+	test('should display game creation functionality', async ({ page }) => {
 		// Create unique user for this test
 		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
 
@@ -50,28 +49,67 @@ test.describe('Dashboard Functionality', () => {
 		await page.click('button[type="submit"]');
 		await page.waitForURL('/dashboard');
 
-		// Check welcome card
-		const welcomeCard = page.locator('.welcome-card');
-		await expect(welcomeCard).toBeVisible();
-		await expect(welcomeCard.locator('h2')).toContainText('Ultimate Tic Tac Toe');
-		await expect(welcomeCard).toContainText('Ready to play the ultimate version of tic-tac-toe?');
+		// Check game section title
+		await expect(page.locator('h2')).toContainText('Ultimate Tic-Tac-Toe');
 
-		// Check game section
-		const gameSection = page.locator('.game-section');
-		await expect(gameSection).toBeVisible();
-		await expect(gameSection.locator('h3')).toContainText('Game Options');
-
-		// Check game buttons
-		const gameButtons = page.locator('.game-btn');
-		await expect(gameButtons).toHaveCount(3);
-
-		const buttons = await gameButtons.allTextContents();
-		expect(buttons).toContain('Start New Game');
-		expect(buttons).toContain('Join Game');
-		expect(buttons).toContain('View Game History');
+		// Check create game button
+		const createGameBtn = page.locator('.create-game');
+		await expect(createGameBtn).toBeVisible();
+		await expect(createGameBtn).toContainText('Create New Game');
+		await expect(createGameBtn).toBeEnabled();
 	});
 
-	test('should display logout button', async ({ page }) => {
+	test('should display game sections', async ({ page }) => {
+		// Create unique user for this test
+		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
+
+		// Register user
+		await page.goto('/register');
+		await page.fill('input[name="email"]', dashboardUser.email);
+		await page.fill('input[name="username"]', dashboardUser.username);
+		await page.fill('input[name="password"]', dashboardUser.password);
+		await page.fill('input[name="confirmPassword"]', dashboardUser.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		// Check My Games section
+		const myGamesSection = page.locator('.games-section').first();
+		await expect(myGamesSection.locator('h3')).toContainText('My Games');
+		await expect(myGamesSection.locator('.no-games')).toContainText('No games yet');
+
+		// Check Available Games section
+		const availableGamesSection = page.locator('.games-section').nth(1);
+		await expect(availableGamesSection.locator('h3')).toContainText('Available Games');
+		await expect(availableGamesSection.locator('.no-games')).toContainText('No games waiting');
+
+		// Check refresh button
+		const refreshBtn = page.locator('.refresh-btn');
+		await expect(refreshBtn).toBeVisible();
+		await expect(refreshBtn).toContainText('Refresh Games');
+	});
+
+	test('should create a new game successfully', async ({ page }) => {
+		// Create unique user for this test
+		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
+
+		// Register user
+		await page.goto('/register');
+		await page.fill('input[name="email"]', dashboardUser.email);
+		await page.fill('input[name="username"]', dashboardUser.username);
+		await page.fill('input[name="password"]', dashboardUser.password);
+		await page.fill('input[name="confirmPassword"]', dashboardUser.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		// Click create game button
+		await page.click('.create-game');
+
+		// Should redirect to game page
+		await page.waitForURL(/\/game\/[a-f0-9-]+/);
+		await expect(page.locator('h2')).toContainText('Ultimate Tic-Tac-Toe');
+	});
+
+	test('should display logout button and functionality', async ({ page }) => {
 		// Create unique user for this test
 		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
 
@@ -87,103 +125,64 @@ test.describe('Dashboard Functionality', () => {
 		const logoutButton = page.locator('.logout-btn');
 		await expect(logoutButton).toBeVisible();
 		await expect(logoutButton).toContainText('Logout');
-	});
-
-	test('should handle game button interactions', async ({ page }) => {
-		// Create unique user for this test
-		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
-
-		// Register user
-		await page.goto('/register');
-		await page.fill('input[name="email"]', dashboardUser.email);
-		await page.fill('input[name="username"]', dashboardUser.username);
-		await page.fill('input[name="password"]', dashboardUser.password);
-		await page.fill('input[name="confirmPassword"]', dashboardUser.password);
-		await page.click('button[type="submit"]');
-		await page.waitForURL('/dashboard');
-
-		// Test Start New Game button
-		const startGameBtn = page.locator('.game-btn').filter({ hasText: 'Start New Game' });
-		await expect(startGameBtn).toBeVisible();
-		await expect(startGameBtn).toBeEnabled();
-
-		// Test Join Game button
-		const joinGameBtn = page.locator('.game-btn').filter({ hasText: 'Join Game' });
-		await expect(joinGameBtn).toBeVisible();
-		await expect(joinGameBtn).toBeEnabled();
-
-		// Test View Game History button
-		const historyBtn = page.locator('.game-btn').filter({ hasText: 'View Game History' });
-		await expect(historyBtn).toBeVisible();
-		await expect(historyBtn).toBeEnabled();
-
-		// Click each button (they don't have functionality yet, but should be clickable)
-		await startGameBtn.click();
-		await joinGameBtn.click();
-		await historyBtn.click();
-	});
-
-	test('should have proper styling and layout', async ({ page }) => {
-		// Create unique user for this test
-		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
-
-		// Register user
-		await page.goto('/register');
-		await page.fill('input[name="email"]', dashboardUser.email);
-		await page.fill('input[name="username"]', dashboardUser.username);
-		await page.fill('input[name="password"]', dashboardUser.password);
-		await page.fill('input[name="confirmPassword"]', dashboardUser.password);
-		await page.click('button[type="submit"]');
-		await page.waitForURL('/dashboard');
-
-		// Check main dashboard container
-		const dashboard = page.locator('.dashboard');
-		await expect(dashboard).toBeVisible();
-
-		// Check header section
-		const header = page.locator('header');
-		await expect(header).toBeVisible();
-
-		// Check main content area
-		const main = page.locator('main');
-		await expect(main).toBeVisible();
-
-		// Check that game buttons are laid out in a grid
-		const gameButtons = page.locator('.game-buttons');
-		await expect(gameButtons).toBeVisible();
-
-		// Verify responsive design - buttons should be visible and properly spaced
-		const buttons = page.locator('.game-btn');
-		for (let i = 0; i < (await buttons.count()); i++) {
-			await expect(buttons.nth(i)).toBeVisible();
-		}
-	});
-
-	test('should logout and redirect to login', async ({ page }) => {
-		// Create unique user for this test
-		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
-
-		// Register user
-		await page.goto('/register');
-		await page.fill('input[name="email"]', dashboardUser.email);
-		await page.fill('input[name="username"]', dashboardUser.username);
-		await page.fill('input[name="password"]', dashboardUser.password);
-		await page.fill('input[name="confirmPassword"]', dashboardUser.password);
-		await page.click('button[type="submit"]');
-		await page.waitForURL('/dashboard');
 
 		// Click logout button
-		await page.click('.logout-btn');
+		await logoutButton.click();
 
 		// Should redirect to login page
 		await page.waitForURL('/login');
-
-		// Verify we're on login page
 		await expect(page.locator('h2')).toContainText('Login');
+	});
 
-		// Should not be able to access dashboard anymore
-		await page.goto('/dashboard');
-		await page.waitForURL('/login');
+	test('should handle game refresh functionality', async ({ page }) => {
+		// Create unique user for this test
+		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
+
+		// Register user
+		await page.goto('/register');
+		await page.fill('input[name="email"]', dashboardUser.email);
+		await page.fill('input[name="username"]', dashboardUser.username);
+		await page.fill('input[name="password"]', dashboardUser.password);
+		await page.fill('input[name="confirmPassword"]', dashboardUser.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		// Click refresh button
+		const refreshBtn = page.locator('.refresh-btn');
+		await refreshBtn.click();
+
+		// Button should show loading state briefly
+		await expect(refreshBtn).toContainText('Loading...');
+
+		// Wait for loading to complete
+		await expect(refreshBtn).toContainText('Refresh Games');
+	});
+
+	test('should display games correctly when user has games', async ({ page }) => {
+		// Create unique user for this test
+		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
+
+		// Register user
+		await page.goto('/register');
+		await page.fill('input[name="email"]', dashboardUser.email);
+		await page.fill('input[name="username"]', dashboardUser.username);
+		await page.fill('input[name="password"]', dashboardUser.password);
+		await page.fill('input[name="confirmPassword"]', dashboardUser.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		// Create a game
+		await page.click('.create-game');
+		await page.waitForURL(/\/game\/[a-f0-9-]+/);
+
+		// Go back to dashboard
+		await page.click('.btn-secondary');
+		await page.waitForURL('/dashboard');
+
+		// Should now show the game in My Games section
+		const myGamesSection = page.locator('.games-section').first();
+		await expect(myGamesSection.locator('.game-card')).toBeVisible();
+		await expect(myGamesSection.locator('.game-status')).toContainText('Waiting for opponent');
 	});
 
 	test('should handle page refresh while authenticated', async ({ page }) => {
@@ -202,19 +201,39 @@ test.describe('Dashboard Functionality', () => {
 		// Refresh the page
 		await page.reload();
 
-		// Should still be on dashboard
+		// Should still be on dashboard and show user info
 		await expect(page.locator('h1')).toContainText(`Welcome, ${dashboardUser.username}!`);
-
-		// User info should still be displayed
 		await expect(page.locator('.user-info')).toContainText(dashboardUser.email);
 	});
 
-	test('should display loading state during authentication check', async ({ page }) => {
-		// Clear localStorage and go to dashboard
-		await page.evaluate(() => localStorage.clear());
-		await page.goto('/dashboard');
+	test('should have proper responsive design', async ({ page }) => {
+		// Create unique user for this test
+		const dashboardUser = DatabaseHelper.createUniqueTestUser('dashboardUser');
 
-		// Should redirect to login since not authenticated
-		await page.waitForURL('/login');
+		// Register user
+		await page.goto('/register');
+		await page.fill('input[name="email"]', dashboardUser.email);
+		await page.fill('input[name="username"]', dashboardUser.username);
+		await page.fill('input[name="password"]', dashboardUser.password);
+		await page.fill('input[name="confirmPassword"]', dashboardUser.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		// Test mobile viewport
+		await page.setViewportSize({ width: 375, height: 667 });
+
+		// Dashboard should still be visible and functional
+		await expect(page.locator('.dashboard')).toBeVisible();
+		await expect(page.locator('.header')).toBeVisible();
+		await expect(page.locator('.game-section')).toBeVisible();
+		await expect(page.locator('.create-game')).toBeVisible();
+
+		// Test tablet viewport
+		await page.setViewportSize({ width: 768, height: 1024 });
+		await expect(page.locator('.games-container')).toBeVisible();
+
+		// Test desktop viewport
+		await page.setViewportSize({ width: 1920, height: 1080 });
+		await expect(page.locator('.games-container')).toBeVisible();
 	});
 });

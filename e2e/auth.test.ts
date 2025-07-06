@@ -223,4 +223,96 @@ test.describe('Authentication Flow', () => {
 		await page.click('a[href="/login"]');
 		await expect(page).toHaveURL('/login');
 	});
+
+	test('should redirect authenticated users away from auth pages', async ({ page }) => {
+		// Create unique user for this test
+		const testUser = DatabaseHelper.createUniqueTestUser('e2eTestUser');
+
+		// Register and login
+		await page.goto('/register');
+		await page.fill('input[name="email"]', testUser.email);
+		await page.fill('input[name="username"]', testUser.username);
+		await page.fill('input[name="password"]', testUser.password);
+		await page.fill('input[name="confirmPassword"]', testUser.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		// Try to access login page while authenticated
+		await page.goto('/login');
+		await page.waitForURL('/dashboard');
+
+		// Try to access register page while authenticated
+		await page.goto('/register');
+		await page.waitForURL('/dashboard');
+	});
+
+	test('should maintain authentication state across game navigation', async ({ page }) => {
+		// Create unique user for this test
+		const testUser = DatabaseHelper.createUniqueTestUser('e2eTestUser');
+
+		// Register and login
+		await page.goto('/register');
+		await page.fill('input[name="email"]', testUser.email);
+		await page.fill('input[name="username"]', testUser.username);
+		await page.fill('input[name="password"]', testUser.password);
+		await page.fill('input[name="confirmPassword"]', testUser.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		// Create a game
+		await page.click('.create-game');
+		await page.waitForURL(/\/game\/[a-f0-9-]+/);
+
+		// Navigate back to dashboard
+		await page.click('.btn-secondary');
+		await page.waitForURL('/dashboard');
+
+		// Should still be authenticated
+		await expect(page.locator('h1')).toContainText(`Welcome, ${testUser.username}!`);
+	});
+
+	test('should handle logout from game page', async ({ page }) => {
+		// Create unique user for this test
+		const testUser = DatabaseHelper.createUniqueTestUser('e2eTestUser');
+
+		// Register and login
+		await page.goto('/register');
+		await page.fill('input[name="email"]', testUser.email);
+		await page.fill('input[name="username"]', testUser.username);
+		await page.fill('input[name="password"]', testUser.password);
+		await page.fill('input[name="confirmPassword"]', testUser.password);
+		await page.click('button[type="submit"]');
+		await page.waitForURL('/dashboard');
+
+		// Create a game
+		await page.click('.create-game');
+		await page.waitForURL(/\/game\/[a-f0-9-]+/);
+
+		// Go back to dashboard and logout
+		await page.click('.btn-secondary');
+		await page.waitForURL('/dashboard');
+		await page.click('.logout-btn');
+		await page.waitForURL('/login');
+
+		// Try to access the game page after logout
+		await page.goto('/game/some-game-id');
+		await page.waitForURL('/login');
+	});
+
+	test('should display proper error messages for authentication failures', async ({ page }) => {
+		await page.goto('/login');
+
+		// Test with non-existent user
+		await page.fill('input[name="email"]', 'nonexistent@example.com');
+		await page.fill('input[name="password"]', 'wrongpassword');
+		await page.click('button[type="submit"]');
+
+		await page.waitForTimeout(2000);
+		await expect(page.locator('.error')).toContainText('Invalid credentials');
+
+		// Error should be visible and styled
+		const errorElement = page.locator('.error');
+		await expect(errorElement).toBeVisible();
+		await expect(errorElement).toHaveCSS('color', /rgb\(.*\)/); // Should have some color styling
+	});
 });
