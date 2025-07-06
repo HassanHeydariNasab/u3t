@@ -1,117 +1,125 @@
-import { graphqlClient, updateAuthHeaders } from './graphql/client';
-import { LOGIN_MUTATION, REGISTER_MUTATION, GET_PROFILE_QUERY } from './graphql/queries';
 import { browser } from '$app/environment';
-import type {
-	User,
-	AuthResponse,
-	LoginInput,
-	RegisterInput,
-	LoginMutationResponse,
-	RegisterMutationResponse,
-	GetProfileQueryResponse
-} from './types/graphql';
 
-export {
-	type User,
-	type AuthResponse,
-	type LoginInput as LoginData,
-	type RegisterInput as RegisterData
-};
-
-// Error handler for GraphQL requests
-function handleGraphQLError(error: any) {
-	console.error('GraphQL Error:', error);
-
-	// Handle GraphQL errors from our backend
-	if (error.response?.errors) {
-		const graphqlError = error.response.errors[0];
-
-		// Handle authentication errors
-		if (
-			graphqlError.message.includes('Unauthorized') ||
-			graphqlError.message.includes('Authorization header not found') ||
-			graphqlError.message.includes('Invalid token') ||
-			graphqlError.message.includes('User not found')
-		) {
-			if (browser) {
-				localStorage.removeItem('access_token');
-				window.location.href = '/login';
-			}
-		}
-
-		throw new Error(graphqlError.message);
-	}
-
-	// Handle network errors
-	if (error.message) {
-		throw new Error(error.message);
-	}
-
-	throw new Error('An unexpected error occurred');
+export interface User {
+	id: string;
+	email: string;
+	username: string;
+	created_at: string;
+	updated_at: string;
 }
 
-export const authAPI = {
-	login: async (loginInput: LoginInput): Promise<AuthResponse> => {
-		try {
-			const data = await graphqlClient.request<LoginMutationResponse>(LOGIN_MUTATION, {
-				loginInput
-			});
+export interface AuthResponse {
+	access_token: string;
+	user: User;
+}
 
-			if (!data?.login) {
-				throw new Error('Login failed');
-			}
+export interface LoginInput {
+	email: string;
+	password: string;
+}
 
-			// Update headers with the new token
-			if (browser) {
-				localStorage.setItem('access_token', data.login.access_token);
-				updateAuthHeaders();
-			}
+export interface RegisterInput {
+	email: string;
+	username: string;
+	password: string;
+}
 
-			return data.login;
-		} catch (error) {
-			handleGraphQLError(error);
-			throw error;
-		}
-	},
+// Export aliases for backwards compatibility
+export type LoginData = LoginInput;
+export type RegisterData = RegisterInput;
 
-	register: async (registerInput: RegisterInput): Promise<AuthResponse> => {
-		try {
-			const data = await graphqlClient.request<RegisterMutationResponse>(REGISTER_MUTATION, {
-				registerInput
-			});
+class ApiClient {
+	private baseUrl = '/api';
 
-			if (!data?.register) {
-				throw new Error('Registration failed');
-			}
-
-			// Update headers with the new token
-			if (browser) {
-				localStorage.setItem('access_token', data.register.access_token);
-				updateAuthHeaders();
-			}
-
-			return data.register;
-		} catch (error) {
-			handleGraphQLError(error);
-			throw error;
-		}
-	},
-
-	getProfile: async (): Promise<User> => {
-		try {
-			// Ensure we have the latest auth headers
-			updateAuthHeaders();
-
-			const data = await graphqlClient.request<GetProfileQueryResponse>(GET_PROFILE_QUERY);
-
-			if (!data?.profile) {
-				throw new Error('Failed to get profile');
-			}
-
-			return data.profile;
-		} catch (error) {
-			handleGraphQLError(error);
-			throw error;
-		}
+	private getAuthHeaders(): Record<string, string> {
+		const token = browser ? localStorage.getItem('access_token') : null;
+		return token ? { Authorization: `Bearer ${token}` } : {};
 	}
+
+	private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+		const url = `${this.baseUrl}${endpoint}`;
+		const headers = {
+			'Content-Type': 'application/json',
+			...this.getAuthHeaders(),
+			...options.headers
+		};
+
+		const response = await fetch(url, {
+			...options,
+			headers
+		});
+
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+
+			// Handle authentication errors - but don't redirect for login endpoints
+			if (response.status === 401 && !endpoint.includes('/auth/login')) {
+				if (browser) {
+					localStorage.removeItem('access_token');
+					window.location.href = '/login';
+				}
+			}
+
+			throw new Error(error.error || `HTTP ${response.status}`);
+		}
+
+		return response.json();
+	}
+
+	async login(input: LoginInput): Promise<AuthResponse> {
+		const result = await this.request<AuthResponse>('/auth/login', {
+			method: 'POST',
+			body: JSON.stringify(input)
+		});
+
+		// Store token in localStorage
+		if (browser) {
+			localStorage.setItem('access_token', result.access_token);
+		}
+
+		return result;
+	}
+
+	async register(input: RegisterInput): Promise<AuthResponse> {
+		const result = await this.request<AuthResponse>('/auth/register', {
+			method: 'POST',
+			body: JSON.stringify(input)
+		});
+
+		// Store token in localStorage
+		if (browser) {
+			localStorage.setItem('access_token', result.access_token);
+		}
+
+		return result;
+	}
+
+	async getProfile(): Promise<User> {
+		return this.request<User>('/auth/profile');
+	}
+
+	async getUsers(): Promise<User[]> {
+		return this.request<User[]>('/users');
+	}
+
+	async getUser(id: string): Promise<User> {
+		return this.request<User>(`/users/${id}`);
+	}
+
+	async clearUsers(): Promise<{ success: boolean }> {
+		return this.request<{ success: boolean }>('/users', {
+			method: 'DELETE'
+		});
+	}
+}
+
+const apiClient = new ApiClient();
+
+// Export the API client methods as before for backwards compatibility
+export const authAPI = {
+	login: apiClient.login.bind(apiClient),
+	register: apiClient.register.bind(apiClient),
+	getProfile: apiClient.getProfile.bind(apiClient)
 };
+
+export { apiClient };

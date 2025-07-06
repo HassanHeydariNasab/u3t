@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { auth } from '../stores/auth';
 	import { goto } from '$app/navigation';
+	import { auth } from '../stores/auth';
 
 	let email = '';
 	let password = '';
@@ -8,6 +8,7 @@
 	let error = '';
 
 	async function handleSubmit() {
+		console.log('handleSubmit called');
 		if (!email || !password) {
 			error = 'Please fill in all fields';
 			return;
@@ -20,7 +21,7 @@
 			await auth.login({ email, password });
 			goto('/dashboard');
 		} catch (err: any) {
-			error = err.response?.data?.message || 'Login failed';
+			error = err.message || 'Login failed';
 		} finally {
 			isLoading = false;
 		}
@@ -30,7 +31,7 @@
 <div class="login-form">
 	<h2>Login</h2>
 
-	<form on:submit|preventDefault={handleSubmit} autocomplete="on">
+	<form on:submit|preventDefault={handleSubmit} autocomplete="on" novalidate>
 		<div class="form-group">
 			<label for="email">Email</label>
 			<input

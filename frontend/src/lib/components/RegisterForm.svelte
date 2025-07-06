@@ -32,7 +32,7 @@
 			await auth.register({ email, username, password });
 			goto('/dashboard');
 		} catch (err: any) {
-			error = err.response?.data?.message || 'Registration failed';
+			error = err.message || 'Registration failed';
 		} finally {
 			isLoading = false;
 		}
@@ -42,7 +42,7 @@
 <div class="register-form">
 	<h2>Register</h2>
 
-	<form on:submit|preventDefault={handleSubmit} autocomplete="on">
+	<form on:submit|preventDefault={handleSubmit} autocomplete="on" novalidate>
 		<div class="form-group">
 			<label for="email">Email</label>
 			<input
