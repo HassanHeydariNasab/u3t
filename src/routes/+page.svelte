@@ -3,8 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { authStore, auth } from '$lib/stores/auth';
 
-	onMount(async () => {
-		await auth.checkAuth();
+	onMount(() => {
+		auth.checkAuth();
 
 		const unsubscribe = authStore.subscribe((state) => {
 			if (!state.isLoading) {

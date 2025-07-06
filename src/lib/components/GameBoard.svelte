@@ -499,10 +499,6 @@
 			gap: clamp(0.5rem, 1.5vw, 1rem);
 		}
 
-		.panel-header h2 {
-			font-size: clamp(1rem, 3vw, 1.5rem);
-		}
-
 		.players-info {
 			gap: clamp(0.5rem, 2vw, 1rem);
 		}
@@ -528,10 +524,6 @@
 		.info-panel {
 			padding: clamp(0.5rem, 2vw, 1rem);
 			gap: clamp(0.5rem, 1.5vw, 1rem);
-		}
-
-		.panel-header h2 {
-			font-size: clamp(1.2rem, 4vw, 1.8rem);
 		}
 
 		.players-info {

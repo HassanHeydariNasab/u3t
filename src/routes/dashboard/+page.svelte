@@ -9,13 +9,23 @@
 	let loading = false;
 	let error = '';
 
-	onMount(async () => {
-		if (!$authStore.isAuthenticated) {
-			goto('/login');
-			return;
-		}
+	onMount(() => {
+		auth.checkAuth();
 
-		await loadGames();
+		const unsubscribe = authStore.subscribe((state) => {
+			if (!state.isLoading) {
+				if (!state.isAuthenticated) {
+					goto('/login');
+					return;
+				}
+
+				if (state.isAuthenticated) {
+					loadGames();
+				}
+			}
+		});
+
+		return unsubscribe;
 	});
 
 	async function loadGames() {

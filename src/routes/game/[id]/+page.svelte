@@ -14,19 +14,32 @@
 	$: gameId = $page.params.id;
 	$: currentUser = $authStore.user;
 
-	onMount(async () => {
-		// Wait for auth store to be initialized
-		await auth.checkAuth();
+	onMount(() => {
+		// Check auth and set up subscription
+		auth.checkAuth();
 
-		if (!$authStore.isAuthenticated) {
-			goto('/login');
-			return;
-		}
+		// Subscribe to auth store changes
+		const unsubscribe = authStore.subscribe((state) => {
+			if (!state.isLoading) {
+				if (!state.isAuthenticated) {
+					goto('/login');
+					return;
+				}
+				// Only load game if we're authenticated
+				if (state.isAuthenticated) {
+					loadGame();
+					// Poll for game updates every 2 seconds
+					pollInterval = setInterval(loadGame, 2000);
+				}
+			}
+		});
 
-		await loadGame();
-
-		// Poll for game updates every 2 seconds
-		pollInterval = setInterval(loadGame, 2000);
+		return () => {
+			if (pollInterval) {
+				clearInterval(pollInterval);
+			}
+			unsubscribe();
+		};
 	});
 
 	onDestroy(() => {
@@ -116,16 +129,6 @@
 		});
 
 		return canJoin;
-	}
-
-	function getOpponentName(): string {
-		if (!game || !currentUser) return 'Unknown';
-
-		if (game.player1_id === currentUser.id.toString()) {
-			return game.player2_name || 'Waiting...';
-		} else {
-			return game.player1_name || 'Unknown Player';
-		}
 	}
 </script>
 
