@@ -115,9 +115,11 @@
 
 <div class="game-container">
 	<div class="info-panel">
-		<button class="back-btn" onclick={() => (window.location.href = '/dashboard')}>
-			← Back to Dashboard
-		</button>
+		<div class="panel-header">
+			<button class="back-btn btn-secondary" onclick={() => (window.location.href = '/dashboard')}>
+				← Back to Dashboard
+			</button>
+		</div>
 
 		<div class="players-info">
 			<div class="player-card" class:current-player={game.current_player === 'X'}>
@@ -200,6 +202,12 @@
 		flex-direction: column;
 		gap: clamp(1rem, 2vw, 1.5rem);
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+	}
+
+	.panel-header {
+		display: flex;
+		flex-direction: column;
+		gap: clamp(0.5rem, 1.5vw, 1rem);
 	}
 
 	.back-btn {
@@ -333,7 +341,6 @@
 		border-radius: 12px;
 		aspect-ratio: 1;
 		flex-shrink: 0;
-		height: fit-content;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 	}
 
@@ -409,12 +416,6 @@
 		cursor: not-allowed;
 	}
 
-	/* Highlight the last move made */
-	.cell-last-move {
-		background: #f3e5f5;
-		box-shadow: 0 0 0 2px #9c27b0;
-	}
-
 	.cell-x {
 		background: #fdf2f2;
 		color: #e74c3c;
@@ -476,27 +477,90 @@
 			flex-direction: row;
 			align-items: center;
 			justify-content: center;
-			gap: 3vw;
+			gap: clamp(2vw, 3vw, 4vw);
+			height: 100vh;
 		}
 
 		.info-panel {
-			width: clamp(280px, 25vw, 350px);
+			width: clamp(280px, 22vw, 320px);
 			height: fit-content;
-			max-height: 90vh;
+			max-height: 85vh;
 			overflow-y: auto;
+			flex-shrink: 0;
 		}
 
 		.game-board {
-			width: min(60vh, 60vw);
-			height: min(60vh, 60vw);
+			/* Calculate optimal size based on available space */
+			--available-width: calc(100vw - clamp(280px, 22vw, 320px) - clamp(2vw, 3vw, 4vw) - 2vh);
+			--available-height: calc(100vh - 2vh);
+			--board-size: min(var(--available-width), var(--available-height), 80vh, 80vw);
+
+			width: var(--board-size);
+			height: var(--board-size);
+			flex-shrink: 0;
+		}
+	}
+
+	/* Large screens - optimize for bigger displays */
+	@media (orientation: landscape) and (min-width: 1400px) {
+		.game-container {
+			gap: clamp(3vw, 4vw, 5vw);
+		}
+
+		.info-panel {
+			width: clamp(320px, 20vw, 400px);
+		}
+
+		.game-board {
+			--available-width: calc(100vw - clamp(320px, 20vw, 400px) - clamp(3vw, 4vw, 5vw) - 4vh);
+			--available-height: calc(100vh - 4vh);
+			--board-size: min(var(--available-width), var(--available-height), 90vh);
+
+			width: var(--board-size);
+			height: var(--board-size);
+		}
+	}
+
+	/* Ultra-wide screens */
+	@media (orientation: landscape) and (min-width: 1920px) {
+		.game-container {
+			gap: 5vw;
+		}
+
+		.info-panel {
+			width: clamp(350px, 18vw, 450px);
+		}
+
+		.game-board {
+			--available-width: calc(100vw - clamp(350px, 18vw, 450px) - 5vw - 4vh);
+			--available-height: calc(100vh - 4vh);
+			--board-size: min(var(--available-width), var(--available-height), 85vh);
+
+			width: var(--board-size);
+			height: var(--board-size);
 		}
 	}
 
 	/* Extra small screens */
 	@media (max-height: 500px) and (orientation: landscape) {
+		.game-container {
+			gap: 2vw;
+		}
+
 		.info-panel {
+			width: clamp(250px, 20vw, 280px);
 			padding: clamp(0.5rem, 2vw, 1rem);
 			gap: clamp(0.5rem, 1.5vw, 1rem);
+			max-height: 90vh;
+		}
+
+		.game-board {
+			--available-width: calc(100vw - clamp(250px, 20vw, 280px) - 2vw - 2vh);
+			--available-height: calc(100vh - 2vh);
+			--board-size: min(var(--available-width), var(--available-height));
+
+			width: var(--board-size);
+			height: var(--board-size);
 		}
 
 		.players-info {
