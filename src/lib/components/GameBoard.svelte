@@ -181,8 +181,10 @@
 		margin: 0;
 		padding: 0;
 		overflow: hidden;
-		height: 100vh;
-		width: 100vw;
+		height: 100dvh;
+		width: 100dvw;
+		height: 100vh; /* fallback */
+		width: 100vw; /* fallback */
 	}
 
 	.game-container {
